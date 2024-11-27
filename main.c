@@ -50,7 +50,7 @@
 //Buzzer
 #define BUZ 0 //PB0
 
-int funcao;
+
 
 int val01_delay = 1000000;
 int val02_delay = 1000000;
@@ -325,7 +325,7 @@ void lcd_Thread  (void const *argument);
 osThreadDef(led_Thread1, osPriorityNormal, 1, 0);
 osThreadDef(led_Thread3, osPriorityNormal, 1, 0);
 osThreadDef(adc_Thread, osPriorityNormal, 1, 0);
-osThreadDef(buzzer_Thread, osPriorityNormal, 1, 0);
+osThreadDef(buzzer_Thread, osPriorityNormal	, 1, 0);
 osThreadDef(control_mode, osPriorityAboveNormal, 1, 0);
 osThreadDef(lcd_Thread, osPriorityAboveNormal, 1, 0);
 
@@ -342,25 +342,22 @@ osMutexId mutex_id;
 osMutexDef(mutex_id); 
 
 volatile uint16_t ADC_VALUE = 0;
+volatile uint16_t freq_buzzer = 0;
 volatile uint8_t toggleBuzzer =  0;
 volatile uint8_t mode = 0;
 
 #define velocidade_default 1000
 volatile uint16_t velocidade = velocidade_default;
 
-//void velocidade_Thread(void const *argument){}
+volatile uint8_t funcao;
 
 void control_mode(void const *argument){
 	lcd_command(POSICAO_00);
 	lcd_print("    Funcoes     ");
 	lcd_command(POSICAO_10);
 	lcd_print("Aperte um botao ");
-	
 	for(;;){
-		
 	ADC_VALUE = readADC();
-	osSignalSet(T_buzzer_ID, 0x01);
-		
 	switch(chaves_ler_todas()){
 		case 5: //SW5 Button C modo piscar funcao 1 
 			funcao = 5;
@@ -375,6 +372,7 @@ void control_mode(void const *argument){
 			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
 		
 			mode = 2;
+			
 			osSignalSet(T_led_ID3, 0x01); // Sinaliza thread Gray Cod
 			break;
 		
@@ -387,76 +385,59 @@ void control_mode(void const *argument){
 			break;
 		
 		case 8: //SW8 Button F modo sonoro/mudo funcao 4
-			funcao = 8;
-			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
-		
-			osDelay(300);
-		
 			osMutexWait(mutex_id, osWaitForever);
       toggleBuzzer = !toggleBuzzer; // Alterna entre som/mudo
 			osMutexRelease(mutex_id);
-		  osSignalSet(T_buzzer_ID, 0x01);
+		 	osSignalSet(T_buzzer_ID, 0x01);
+			funcao = 8;
+			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
 			break;
 		
 		case 1: 	//SW1 Button Y
+			osDelay(300);
 			funcao = 1;
 			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
-		
-			osDelay(300);
 			velocidade = velocidade*2;
 			break;
 		
 		case 2:		//SW2 Button A
+			osDelay(300);
 			funcao = 2;
 			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
-		
-			osDelay(300);
 			velocidade = velocidade/2;
 			break;
 		
 		case 3:		//SW3 Button X
+			osDelay(300); //debounce
 			funcao = 3;
 			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd	
-		
-			osDelay(300); //debounce
 			velocidade = velocidade_default;
 			break;
 		
 		case 4: 	//SW4 Button B
+			osDelay(300);
 			funcao = 4;
 			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd	
-		
-			osDelay(300);
 			velocidade = ADC_VALUE;	
 			break;
 		
 		case 15: //SW15 Button L
 			funcao = 15;
 			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
-		
 			velocidade = 500;
 			break;
 		
 		case 16: //SW16 Button M
 			funcao = 16;
 			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd	
-		
 			velocidade = 2000;
 			break;
 		
 		case 17: //SW17 Button N
 			funcao = 17;
 			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
-		
 			velocidade = 10000;
 			break;
-		
-		case 14: //teste lcd
-			funcao = 14;
-			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
-		
-			break;
-		
 		default:
 			break;
 		}
@@ -523,6 +504,9 @@ void adc_Thread(void const *argument) {
     osSignalWait(0x01, osWaitForever);
 		while(mode == 3){
 			num_leds = (ADC_VALUE + 256) / 512; // 0 a 8 LEDs
+			osMutexWait(mutex_id, osWaitForever);
+      	freq_buzzer = num_leds;
+			osMutexRelease(mutex_id);
 		for (int i = 1; i <= 8; i++) {
 			if (i <= num_leds) {
 				ledsON(i);
@@ -531,7 +515,7 @@ void adc_Thread(void const *argument) {
 			}
 		}
 		 // Sinaliza a Thread do Buzzer
-    osSignalSet(T_buzzer_ID, 0x01);
+    	osSignalSet(T_buzzer_ID, 0x01);
 		osDelay(100); // Atualização a cada 100 ms
 		}
 	}
@@ -545,17 +529,18 @@ void buzzer_Thread(void const *argument) {
     for (;;) {
 			// Aguarda sinal da Thread ADC
       osSignalWait(0x01, osWaitForever);
+
 			// Protege a leitura de freq_buzzer
       osMutexWait(mutex_id, osWaitForever);
-      local_freq_buzzer = ADC_VALUE; // Lê o valor atualizado
-			local_toggleBuzzer = toggleBuzzer;
+      local_freq_buzzer = freq_buzzer; // Lê o valor atualizado
+		local_toggleBuzzer = toggleBuzzer;
       osMutexRelease(mutex_id);
-			if (local_toggleBuzzer && local_freq_buzzer > 0) {
+			if (local_toggleBuzzer) {
 				RCC->APB1ENR |= (1<<1);
-				TIM3->CCR2 = 50;
+				TIM3->CCR2 = 5000;
 				TIM3->CCER = 0x1 << 8; /*CC2P = 0, CC2E = 1 */
 				TIM3->CCMR2 = 0x0030;  /* toggle channel 3 */
-				TIM3->ARR = (local_freq_buzzer)*1047*2;				
+				TIM3->ARR = (local_freq_buzzer)*1047;				
 				TIM3->CR1 = 1;
 			 } 
 			else {
@@ -563,7 +548,7 @@ void buzzer_Thread(void const *argument) {
 				TIM3->CR1 = 0;                      // Desativa o timer
 				RCC->APB1ENR &= ~(1 << 1);          // Desabilita o clock
 			}			
-			osDelay(100);
+			osDelay(200);
 		}
 }
 
@@ -663,15 +648,7 @@ void lcd_Thread(void const *argument){
 				lcd_print("atual: 10000 ms   ");
 
 				break;
-			
-			case 14: //teste lcd
-				lcd_command(POSICAO_00);
-				lcd_print("      Teste     ");
-				lcd_command(POSICAO_10);
-				lcd_print("       lcd      ");
-			
-				break;
-			
+
 			default:
 				lcd_command(POSICAO_00);
 				lcd_print("    Funcoes     ");
@@ -680,7 +657,7 @@ void lcd_Thread(void const *argument){
 			
 				break;
 			}
-			osDelay(100); // Verifica o estado dos botões a cada 100ms
+			osDelay(100);
 	}
 }
 
@@ -695,12 +672,12 @@ int main(void) {
 	
 	mutex_id = osMutexCreate(osMutex(mutex_id));
 	
-	T_lcd_ID = osThreadCreate(osThread(lcd_Thread), NULL);
 	T_control_mode = osThreadCreate(osThread(control_mode), NULL);
+	T_lcd_ID = osThreadCreate(osThread(lcd_Thread), NULL);
+	T_buzzer_ID = osThreadCreate(osThread(buzzer_Thread), NULL);
+	T_adc_ID = osThreadCreate(osThread(adc_Thread), NULL);
 	T_led_ID1 = osThreadCreate(osThread(led_Thread1), NULL); 
 	T_led_ID3 = osThreadCreate(osThread(led_Thread3), NULL); 
-	T_adc_ID = osThreadCreate(osThread(adc_Thread), NULL); 	
-	T_buzzer_ID = osThreadCreate(osThread(buzzer_Thread), NULL); 		
 	
 	osKernelStart(); // Inicia o RTOS
 	
