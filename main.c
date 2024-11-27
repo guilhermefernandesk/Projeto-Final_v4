@@ -23,7 +23,7 @@
 //Comandos
 #define POSICAO_00 0x02 //00 linha 0 e coluna 0
 #define POSICAO_10 0xC0 //10 linha 1 e coluna 0
-#define LIMPAR 0x01 // limpa o display  
+#define LIMPAR 0x01 		// limpa o display  
 
 //Switches
 #define SW1 12  //PB12
@@ -49,14 +49,6 @@
 
 //Buzzer
 #define BUZ 0 //PB0
-
-
-
-int val01_delay = 1000000;
-int val02_delay = 1000000;
-
-int val01_osDelay = 1000000;
-int val02_osDelay = 1000000;
 
 /*----------------------------------------------------------------------------
   Simple delay routine
@@ -312,32 +304,29 @@ uint16_t readADC(){
 	return ADC1->DR;
 }
 
-
-
-
-void led_Thread1 (void const *argument);
-void led_Thread3 (void const *argument);
-void adc_Thread  (void const *argument);
+void led_ThreadF1 (void const *argument);
+void led_ThreadF2 (void const *argument);
+void ledPot_ThreadF3  (void const *argument);
 void buzzer_Thread  (void const *argument);					
 void control_mode  (void const *argument);
 void lcd_Thread  (void const *argument);
 
-osThreadDef(led_Thread1, osPriorityNormal, 1, 0);
-osThreadDef(led_Thread3, osPriorityNormal, 1, 0);
-osThreadDef(adc_Thread, osPriorityNormal, 1, 0);
+osThreadDef(led_ThreadF1, osPriorityNormal, 1, 0);
+osThreadDef(led_ThreadF2, osPriorityNormal, 1, 0);
+osThreadDef(ledPot_ThreadF3, osPriorityNormal, 1, 0);
 osThreadDef(buzzer_Thread, osPriorityNormal	, 1, 0);
 osThreadDef(control_mode, osPriorityAboveNormal, 1, 0);
 osThreadDef(lcd_Thread, osPriorityAboveNormal, 1, 0);
 
-osThreadId T_led_ID1;
-osThreadId T_led_ID3;	
+osThreadId T_ledF1_ID;
+osThreadId T_ledF2_ID;	
 osThreadId T_adc_ID;
 osThreadId T_buzzer_ID;
 osThreadId T_control_mode;
 osThreadId T_lcd_ID;
 
 
-// Mutex para evitar deadlocks
+// Mutex para integridade dos recursos
 osMutexId mutex_id;           
 osMutexDef(mutex_id); 
 
@@ -364,7 +353,7 @@ void control_mode(void const *argument){
 			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
 		
 			mode = 1;	
-			osSignalSet(T_led_ID1, 0x01); // Sinaliza thread 1
+			osSignalSet(T_ledF1_ID, 0x01); // Sinaliza thread 1
 			break;
 		
 		case 6: //SW6 Button D modo piscar funcao 2
@@ -372,8 +361,8 @@ void control_mode(void const *argument){
 			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
 		
 			mode = 2;
-			
-			osSignalSet(T_led_ID3, 0x01); // Sinaliza thread Gray Cod
+			leds_apaga_todos();
+			osSignalSet(T_ledF2_ID, 0x01); // Sinaliza thread Gray Cod
 			break;
 		
 		case 7: //SW7 Button E modo piscar funcao 3
@@ -385,6 +374,7 @@ void control_mode(void const *argument){
 			break;
 		
 		case 8: //SW8 Button F modo sonoro/mudo funcao 4
+		osDelay(300);
 			osMutexWait(mutex_id, osWaitForever);
       toggleBuzzer = !toggleBuzzer; // Alterna entre som/mudo
 			osMutexRelease(mutex_id);
@@ -446,9 +436,9 @@ void control_mode(void const *argument){
 }
 
 /*-------------------------------------------------------------------------------
-  Thread LED(F1.1 - piscar leds impares)
+  Thread LED(F1 - piscar leds impares e pares)
 -------------------------------------------------------------------------------*/
-void led_Thread1(void const *argument) {
+void led_ThreadF1(void const *argument) {
     for (;;) {
 			osSignalWait(0x01, osWaitForever);
 			leds_apaga_todos();
@@ -477,11 +467,11 @@ void led_Thread1(void const *argument) {
 /*-------------------------------------------------------------------------------
   Thread LED(F2 - piscar leds Gray)
 -------------------------------------------------------------------------------*/
-void led_Thread3(void const *argument) {	
+void led_ThreadF2(void const *argument) {	
 		uint8_t gray_code[] = {0b0001, 0b0011, 0b0010, 0b0110, 0b0111, 0b0101, 0b0100, 0b1100};
     for(;;) {
 			osSignalWait(0x01, osWaitForever);
-			leds_apaga_todos();
+			
 			while(mode == 2){
         for (int i = 0; i <= 8; i++) {
 					if(i == 7){
@@ -496,9 +486,9 @@ void led_Thread3(void const *argument) {
     }
 }
 /*-------------------------------------------------------------------------------
-  Thread POT_LED(F3 - Acender leds pelo barra do potenciometro)
+  Thread LED_POT(F3 - Acender leds pelo barra do potenciometro)
 -------------------------------------------------------------------------------*/
-void adc_Thread(void const *argument) {
+void ledPot_ThreadF3(void const *argument) {
 	uint8_t num_leds;
 	for(;;){
     osSignalWait(0x01, osWaitForever);
@@ -521,9 +511,9 @@ void adc_Thread(void const *argument) {
 	}
 }
 /*-------------------------------------------------------------------------------
-  Thread Buzzer(F4 - Trocar freq pelo num leds)
+  Thread Buzzer(F4 - Tocar buzzer pelo num leds)
 -------------------------------------------------------------------------------*/
-void buzzer_Thread(void const *argument) {
+void buzzer_ThreadF4(void const *argument) {
     uint8_t local_freq_buzzer;
 		uint8_t local_toggleBuzzer;
     for (;;) {
@@ -551,15 +541,12 @@ void buzzer_Thread(void const *argument) {
 			osDelay(200);
 		}
 }
-
-
 /*-------------------------------------------------------------------------------
   Thread lcd (configurar telas)
 -------------------------------------------------------------------------------*/
 void lcd_Thread(void const *argument){
 	for(;;){
 		osSignalWait(0x01, osWaitForever);
-		
 		switch(funcao){
 			case 5: //SW5 Button C modo piscar funcao 1 
 				lcd_command(POSICAO_00);
@@ -660,7 +647,6 @@ void lcd_Thread(void const *argument){
 			osDelay(100);
 	}
 }
-
 /*----------------------------------------------------------------------------
   Initilise and create the threads
  *---------------------------------------------------------------------------*/
@@ -675,9 +661,9 @@ int main(void) {
 	T_control_mode = osThreadCreate(osThread(control_mode), NULL);
 	T_lcd_ID = osThreadCreate(osThread(lcd_Thread), NULL);
 	T_buzzer_ID = osThreadCreate(osThread(buzzer_Thread), NULL);
-	T_adc_ID = osThreadCreate(osThread(adc_Thread), NULL);
-	T_led_ID1 = osThreadCreate(osThread(led_Thread1), NULL); 
-	T_led_ID3 = osThreadCreate(osThread(led_Thread3), NULL); 
+	T_adc_ID = osThreadCreate(osThread(ledPot_ThreadF3), NULL);
+	T_ledF1_ID = osThreadCreate(osThread(led_ThreadF1), NULL); 
+	T_ledF2_ID = osThreadCreate(osThread(led_ThreadF2), NULL); 
 	
 	osKernelStart(); // Inicia o RTOS
 	

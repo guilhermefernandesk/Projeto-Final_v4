@@ -800,7 +800,7 @@ Removing Unused input sections from the image.
     Removing rtx_conf_cm.o(.rodata.os_tickus_i), (2 bytes).
     Removing rtx_conf_cm.o(.rodata.os_tickus_f), (2 bytes).
     Removing rtx_conf_cm.o(.bss.os_tmr), (4 bytes).
-    Removing rtx_conf_cm.o(.bss.std_libspace), (672 bytes).
+    Removing rtx_conf_cm.o(.bss.std_libspace), (768 bytes).
     Removing rtx_conf_cm.o(.bss.nr_mutex), (4 bytes).
     Removing rtx_conf_cm.o(.bss.std_libmutex), (128 bytes).
     Removing system_stm32f10x.o(.text), (0 bytes).
@@ -896,7 +896,7 @@ Removing Unused input sections from the image.
     Removing rt_time.o(i.rt_time_get), (12 bytes).
     Removing rt_membox.o(i._calloc_box), (30 bytes).
 
-141 unused section(s) (total 4886 bytes) removed from the image.
+141 unused section(s) (total 4982 bytes) removed from the image.
 
 ==============================================================================
 
@@ -1207,11 +1207,11 @@ Image Symbol Table
     .bss                                     0x20000030   Section       52  rt_task.o(.bss)
     .bss                                     0x20000064   Section       48  rt_list.o(.bss)
     .bss                                     0x20000094   Section       96  libspace.o(.bss)
-    Heap_Mem                                 0x200009f0   Data         512  startup_stm32f10x_md.o(HEAP)
-    HEAP                                     0x200009f0   Section      512  startup_stm32f10x_md.o(HEAP)
-    Stack_Mem                                0x20000bf0   Data        1024  startup_stm32f10x_md.o(STACK)
-    STACK                                    0x20000bf0   Section     1024  startup_stm32f10x_md.o(STACK)
-    __initial_sp                             0x20000ff0   Data           0  startup_stm32f10x_md.o(STACK)
+    Heap_Mem                                 0x20000af0   Data         512  startup_stm32f10x_md.o(HEAP)
+    HEAP                                     0x20000af0   Section      512  startup_stm32f10x_md.o(HEAP)
+    Stack_Mem                                0x20000cf0   Data        1024  startup_stm32f10x_md.o(STACK)
+    STACK                                    0x20000cf0   Section     1024  startup_stm32f10x_md.o(STACK)
+    __initial_sp                             0x200010f0   Data           0  startup_stm32f10x_md.o(STACK)
 
     Global Symbols
 
@@ -1539,17 +1539,17 @@ Image Symbol Table
     funcao                                   0x20000112   Data           1  main.o(.bss.funcao)
     m_tmr                                    0x20000114   Data           4  rtx_conf_cm.o(.bss.m_tmr)
     mode                                     0x20000118   Data           1  main.o(.bss.mode)
-    mp_stk                                   0x20000120   Data        1216  rtx_conf_cm.o(.bss.mp_stk)
-    mp_tcb                                   0x200005e0   Data         376  rtx_conf_cm.o(.bss.mp_tcb)
-    mutex_id                                 0x20000758   Data           4  main.o(.bss.mutex_id)
-    osMessageQId_osTimerMessageQ             0x2000075c   Data           4  rtx_conf_cm.o(.bss.osMessageQId_osTimerMessageQ)
-    osThreadId_osTimerThread                 0x20000760   Data           4  rtx_conf_cm.o(.bss.osThreadId_osTimerThread)
-    os_active_TCB                            0x20000764   Data          28  rtx_conf_cm.o(.bss.os_active_TCB)
-    os_fifo                                  0x20000780   Data         132  rtx_conf_cm.o(.bss.os_fifo)
-    os_messageQ_q_osTimerMessageQ            0x20000804   Data          32  rtx_conf_cm.o(.bss.os_messageQ_q_osTimerMessageQ)
-    os_mutex_cb_mutex_id                     0x20000824   Data          16  main.o(.bss.os_mutex_cb_mutex_id)
-    os_stack_mem                             0x20000838   Data         432  rtx_conf_cm.o(.bss.os_stack_mem)
-    toggleBuzzer                             0x200009e8   Data           1  main.o(.bss.toggleBuzzer)
+    mp_stk                                   0x20000120   Data        1416  rtx_conf_cm.o(.bss.mp_stk)
+    mp_tcb                                   0x200006a8   Data         428  rtx_conf_cm.o(.bss.mp_tcb)
+    mutex_id                                 0x20000854   Data           4  main.o(.bss.mutex_id)
+    osMessageQId_osTimerMessageQ             0x20000858   Data           4  rtx_conf_cm.o(.bss.osMessageQId_osTimerMessageQ)
+    osThreadId_osTimerThread                 0x2000085c   Data           4  rtx_conf_cm.o(.bss.osThreadId_osTimerThread)
+    os_active_TCB                            0x20000860   Data          32  rtx_conf_cm.o(.bss.os_active_TCB)
+    os_fifo                                  0x20000880   Data         132  rtx_conf_cm.o(.bss.os_fifo)
+    os_messageQ_q_osTimerMessageQ            0x20000904   Data          32  rtx_conf_cm.o(.bss.os_messageQ_q_osTimerMessageQ)
+    os_mutex_cb_mutex_id                     0x20000924   Data          16  main.o(.bss.os_mutex_cb_mutex_id)
+    os_stack_mem                             0x20000938   Data         432  rtx_conf_cm.o(.bss.os_stack_mem)
+    toggleBuzzer                             0x20000ae8   Data           1  main.o(.bss.toggleBuzzer)
 
 
 
@@ -1816,7 +1816,7 @@ Memory Map of the image
     0x2000002a   0x08002d8a   0x00000002   Data   RW           60    .data.velocidade    main.o
 
 
-    Execution Region ER_ZI (Exec base: 0x20000030, Load base: 0x08002d8c, Size: 0x00000fc0, Max: 0xffffffff, ABSOLUTE)
+    Execution Region ER_ZI (Exec base: 0x20000030, Load base: 0x08002d8c, Size: 0x000010c0, Max: 0xffffffff, ABSOLUTE)
 
     Exec Addr    Load Addr    Size         Type   Attr      Idx    E Section Name        Object
 
@@ -1837,21 +1837,21 @@ Memory Map of the image
     0x20000114        -       0x00000004   Zero   RW          119    .bss.m_tmr          rtx_conf_cm.o
     0x20000118        -       0x00000001   Zero   RW           59    .bss.mode           main.o
     0x20000119   0x08002d8c   0x00000007   PAD
-    0x20000120        -       0x000004c0   Zero   RW          126    .bss.mp_stk         rtx_conf_cm.o
-    0x200005e0        -       0x00000178   Zero   RW          125    .bss.mp_tcb         rtx_conf_cm.o
-    0x20000758        -       0x00000004   Zero   RW           67    .bss.mutex_id       main.o
-    0x2000075c        -       0x00000004   Zero   RW          131    .bss.osMessageQId_osTimerMessageQ  rtx_conf_cm.o
-    0x20000760        -       0x00000004   Zero   RW          130    .bss.osThreadId_osTimerThread  rtx_conf_cm.o
-    0x20000764        -       0x0000001c   Zero   RW          129    .bss.os_active_TCB  rtx_conf_cm.o
-    0x20000780        -       0x00000084   Zero   RW          128    .bss.os_fifo        rtx_conf_cm.o
-    0x20000804        -       0x00000020   Zero   RW          116    .bss.os_messageQ_q_osTimerMessageQ  rtx_conf_cm.o
-    0x20000824        -       0x00000010   Zero   RW           54    .bss.os_mutex_cb_mutex_id  main.o
-    0x20000834   0x08002d8c   0x00000004   PAD
-    0x20000838        -       0x000001b0   Zero   RW          127    .bss.os_stack_mem   rtx_conf_cm.o
-    0x200009e8        -       0x00000001   Zero   RW           58    .bss.toggleBuzzer   main.o
-    0x200009e9   0x08002d8c   0x00000007   PAD
-    0x200009f0        -       0x00000200   Zero   RW          140    HEAP                startup_stm32f10x_md.o
-    0x20000bf0        -       0x00000400   Zero   RW          139    STACK               startup_stm32f10x_md.o
+    0x20000120        -       0x00000588   Zero   RW          126    .bss.mp_stk         rtx_conf_cm.o
+    0x200006a8        -       0x000001ac   Zero   RW          125    .bss.mp_tcb         rtx_conf_cm.o
+    0x20000854        -       0x00000004   Zero   RW           67    .bss.mutex_id       main.o
+    0x20000858        -       0x00000004   Zero   RW          131    .bss.osMessageQId_osTimerMessageQ  rtx_conf_cm.o
+    0x2000085c        -       0x00000004   Zero   RW          130    .bss.osThreadId_osTimerThread  rtx_conf_cm.o
+    0x20000860        -       0x00000020   Zero   RW          129    .bss.os_active_TCB  rtx_conf_cm.o
+    0x20000880        -       0x00000084   Zero   RW          128    .bss.os_fifo        rtx_conf_cm.o
+    0x20000904        -       0x00000020   Zero   RW          116    .bss.os_messageQ_q_osTimerMessageQ  rtx_conf_cm.o
+    0x20000924        -       0x00000010   Zero   RW           54    .bss.os_mutex_cb_mutex_id  main.o
+    0x20000934   0x08002d8c   0x00000004   PAD
+    0x20000938        -       0x000001b0   Zero   RW          127    .bss.os_stack_mem   rtx_conf_cm.o
+    0x20000ae8        -       0x00000001   Zero   RW           58    .bss.toggleBuzzer   main.o
+    0x20000ae9   0x08002d8c   0x00000007   PAD
+    0x20000af0        -       0x00000200   Zero   RW          140    HEAP                startup_stm32f10x_md.o
+    0x20000cf0        -       0x00000400   Zero   RW          139    STACK               startup_stm32f10x_md.o
 
 
 ==============================================================================
@@ -1862,12 +1862,12 @@ Image component sizes
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
 
       4016         68        409          6         51       9447   main.o
-       232          4         84          0       2228       5572   rtx_conf_cm.o
+       232          4         84          0       2484       5572   rtx_conf_cm.o
         64         26        236          0       1536        852   startup_stm32f10x_md.o
        400          0          0          0          0       2908   system_stm32f10x.o
 
     ----------------------------------------------------------------------
-      4740         98        764          6       3836      18779   Object Totals
+      4740         98        764          6       4092      18779   Object Totals
          0          0         32          0          0          0   (incl. Generated)
         28          0          3          0         21          0   (incl. Padding)
 
@@ -1932,14 +1932,14 @@ Image component sizes
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   
 
-     10852        686        764         44       4032      99705   Grand Totals
-     10852        686        764         44       4032      99705   ELF Image Totals
+     10852        686        764         44       4288      99705   Grand Totals
+     10852        686        764         44       4288      99705   ELF Image Totals
      10852        686        764         44          0          0   ROM Totals
 
 ==============================================================================
 
     Total RO  Size (Code + RO Data)                11616 (  11.34kB)
-    Total RW  Size (RW Data + ZI Data)              4076 (   3.98kB)
+    Total RW  Size (RW Data + ZI Data)              4332 (   4.23kB)
     Total ROM Size (Code + RO Data + RW Data)      11660 (  11.39kB)
 
 ==============================================================================
