@@ -23,7 +23,7 @@
 //Comandos
 #define POSICAO_00 0x02 //00 linha 0 e coluna 0
 #define POSICAO_10 0xC0 //10 linha 1 e coluna 0
-#define LIMPAR 0x01 // limpa o display  
+#define LIMPAR 0x01 		// limpa o display  
 
 //Switches
 #define SW1 12  //PB12
@@ -50,26 +50,19 @@
 //Buzzer
 #define BUZ 0 //PB0
 
-
-int val01_delay = 1000000;
-int val02_delay = 1000000;
-
-int val01_osDelay = 1000000;
-int val02_osDelay = 1000000;
+#define velocidade_default 1000 //1ms
 
 /*----------------------------------------------------------------------------
   Simple delay routine
  *---------------------------------------------------------------------------*/
-void delay_ms(uint16_t t)
-{
+void delay_ms(uint16_t t){
 	volatile unsigned long l = 0;
 	for(uint16_t i = 0; i < t; i++)
 		for(l = 0; l < 6000; l++)
 		{
 		}
 }
-void delay_us(uint16_t t)
-{
+void delay_us(uint16_t t){
 	volatile unsigned long l = 0;
 	for(uint16_t i = 0; i < t; i++)
 		for(l = 0; l < 6; l++)
@@ -77,6 +70,9 @@ void delay_us(uint16_t t)
 		}
 }
 
+/*----------------------------------------------------------------------------
+  Init RedPill routine
+ *---------------------------------------------------------------------------*/
 void setup_RedPill(){
 
 	//int16_t swa, swb, swc;  //Variables to read the switches according to the port it is connected
@@ -188,8 +184,10 @@ void leds_apaga_todos(){
 }
 
 
-void lcd_putValue(unsigned char value)
-{
+/*----------------------------------------------------------------------------
+  LCD routine
+ *---------------------------------------------------------------------------*/
+void lcd_putValue(unsigned char value){
 	uint16_t aux;
 	aux = 0x0000; //clear aux
 	GPIOA->BRR = (1<<5)|(1<<6)|(1<<8)|(1<<11); /* clear PA5, PA6, PA8, PA11 */
@@ -259,12 +257,22 @@ void lcd_init(){
 	delay_ms(3);
 }
 
+/*----------------------------------------------------------------------------
+  ADC routine
+ *---------------------------------------------------------------------------*/
 void adc_init(){
 	ADC1->SQR3 = 9;	/* choose channel 9 as the input */
 	ADC1->CR2 = 1;	/* ADON = 1 (start conversion) */
 	ADC1->CR2 |= 2; //autocalibration
 	delay_us(2);
 }
+uint16_t readADC(){
+	while((ADC1->SR&(1<<1)) == 0); /* wait until the EOC flag is set */		
+	return ADC1->DR;
+}
+/*----------------------------------------------------------------------------
+  Swtichs routine
+ *---------------------------------------------------------------------------*/
 int chaves_ler_todas(){
 	int chave_id_press;
 
@@ -305,95 +313,133 @@ int chaves_ler_todas(){
 		}
 		return chave_id_press = 0;
 }
-
-uint16_t readADC(){
-	while((ADC1->SR&(1<<1)) == 0); /* wait until the EOC flag is set */		
-	return ADC1->DR;
-}
-
-
-
-
-void led_Thread1 (void const *argument);
-void led_Thread3 (void const *argument);
-void adc_Thread  (void const *argument);
+/*----------------------------------------------------------------------------
+	Define Threads
+ *---------------------------------------------------------------------------*/
+void led_ThreadF1 (void const *argument);
+void led_ThreadF2 (void const *argument);
+void ledPot_ThreadF3  (void const *argument);
 void buzzer_Thread  (void const *argument);					
-void control_mode  (void const *argument);					
+void control_mode  (void const *argument);
+void lcd_Thread  (void const *argument);
 
-osThreadDef(led_Thread1, osPriorityNormal, 1, 0);
-osThreadDef(led_Thread3, osPriorityNormal, 1, 0);
-osThreadDef(adc_Thread, osPriorityNormal, 1, 0);
-osThreadDef(buzzer_Thread, osPriorityNormal, 1, 0);
+osThreadDef(led_ThreadF1, osPriorityNormal, 1, 0);
+osThreadDef(led_ThreadF2, osPriorityNormal, 1, 0);
+osThreadDef(ledPot_ThreadF3, osPriorityNormal, 1, 0);
+osThreadDef(buzzer_Thread, osPriorityNormal	, 1, 0);
 osThreadDef(control_mode, osPriorityAboveNormal, 1, 0);
+osThreadDef(lcd_Thread, osPriorityAboveNormal, 1, 0);
 
-osThreadId T_led_ID1;
-osThreadId T_led_ID3;	
+osThreadId T_ledF1_ID;
+osThreadId T_ledF2_ID;	
 osThreadId T_adc_ID;
 osThreadId T_buzzer_ID;
 osThreadId T_control_mode;
+osThreadId T_lcd_ID;
 
-// Mutex para integridade dos dados
+
+// Mutex para integridade dos recursos
 osMutexId mutex_id;           
 osMutexDef(mutex_id); 
+
+//volatiles para alocacao dinamica
 volatile uint16_t ADC_VALUE = 0;
+volatile uint16_t freq_buzzer = 0;
 volatile uint8_t toggleBuzzer =  0;
 volatile uint8_t mode = 0;
-#define velocidade_default 1000
 volatile uint16_t velocidade = velocidade_default;
-//void velocidade_Thread(void const *argument){}
+volatile uint8_t funcao;
+
+/*----------------------------------------------------------------------------
+	Thread Controle (Gerencia thread para cada botao)
+ *---------------------------------------------------------------------------*/
 void control_mode(void const *argument){
-	for(;;){	
+	lcd_command(POSICAO_00);
+	lcd_print("    Funcoes     ");
+	lcd_command(POSICAO_10);
+	lcd_print("Aperte um botao ");
+	for(;;){
 	ADC_VALUE = readADC();
-	osSignalSet(T_buzzer_ID, 0x01);
 	switch(chaves_ler_todas()){
 		case 5: //SW5 Button C modo piscar funcao 1 
+			funcao = 5;
+			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
+		
 			mode = 1;	
-			osSignalSet(T_led_ID1, 0x01); // Sinaliza thread 1
+			osSignalSet(T_ledF1_ID, 0x01); // Sinaliza thread 1
 			break;
+		
 		case 6: //SW6 Button D modo piscar funcao 2
+			funcao = 6;
+			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
+		
 			mode = 2;
-			osSignalSet(T_led_ID3, 0x01); // Sinaliza thread Gray Cod
+			
+			osSignalSet(T_ledF2_ID, 0x01); // Sinaliza thread Gray Cod
 			break;
+		
 		case 7: //SW7 Button E modo piscar funcao 3
+			funcao = 7;
+			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
+		
 			mode = 3;
 			osSignalSet(T_adc_ID, 0x01); // Sinaliza thread Potenciômetro
 			break;
+		
 		case 8: //SW8 Button F modo sonoro/mudo funcao 4
+			osDelay(300);
 			osMutexWait(mutex_id, osWaitForever);
       toggleBuzzer = !toggleBuzzer; // Alterna entre som/mudo
 			osMutexRelease(mutex_id);
-		  osSignalSet(T_buzzer_ID, 0x01);
+		 	osSignalSet(T_buzzer_ID, 0x01);
+			funcao = 8;
+			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
 			break;
+		
 		case 1: 	//SW1 Button Y
 			osDelay(300);
+			funcao = 1;
+			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
 			velocidade = velocidade*2;
 			break;
+		
 		case 2:		//SW2 Button A
 			osDelay(300);
+			funcao = 2;
+			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
 			velocidade = velocidade/2;
 			break;
+		
 		case 3:		//SW3 Button X
 			osDelay(300); //debounce
+			funcao = 3;
+			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd	
 			velocidade = velocidade_default;
 			break;
+		
 		case 4: 	//SW4 Button B
 			osDelay(300);
+			funcao = 4;
+			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd	
 			velocidade = ADC_VALUE;	
 			break;
+		
 		case 15: //SW15 Button L
+			funcao = 15;
+			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
 			velocidade = 500;
 			break;
+		
 		case 16: //SW16 Button M
+			funcao = 16;
+			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd	
 			velocidade = 2000;
 			break;
+		
 		case 17: //SW17 Button N
+			funcao = 17;
+			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
 			velocidade = 10000;
-			break;
-		case 14: //teste lcd
-			lcd_command(POSICAO_00);
-			lcd_print("Par e Impar");
-			lcd_command(POSICAO_10);
-			lcd_print("velocidade");
 			break;
 		default:
 			break;
@@ -401,10 +447,11 @@ void control_mode(void const *argument){
 	  osDelay(100); // Verifica o estado dos botões a cada 100ms
 	}
 }
+
 /*-------------------------------------------------------------------------------
-  Thread LED(F1.1 - piscar leds impares)
+  Thread LED(F1 - piscar leds impares e pares)
 -------------------------------------------------------------------------------*/
-void led_Thread1(void const *argument) {
+void led_ThreadF1(void const *argument) {
     for (;;) {
 			osSignalWait(0x01, osWaitForever);
 			leds_apaga_todos();
@@ -422,7 +469,7 @@ void led_Thread1(void const *argument) {
         for (int i = 2; i <= 8; i+=2) {
 					ledsON(i);
         }
-				 // Desliga todos os LEDs �mpares
+				 // Desliga todos os LEDs  mpares
         for (int i = 1; i <= 8; i+=2) {
 					ledsOFF(i);
         }
@@ -433,7 +480,7 @@ void led_Thread1(void const *argument) {
 /*-------------------------------------------------------------------------------
   Thread LED(F2 - piscar leds Gray)
 -------------------------------------------------------------------------------*/
-void led_Thread3(void const *argument) {	
+void led_ThreadF2(void const *argument) {	
 		uint8_t gray_code[] = {0b0001, 0b0011, 0b0010, 0b0110, 0b0111, 0b0101, 0b0100, 0b1100};
     for(;;) {
 			osSignalWait(0x01, osWaitForever);
@@ -452,14 +499,17 @@ void led_Thread3(void const *argument) {
     }
 }
 /*-------------------------------------------------------------------------------
-  Thread POT_LED(F3 - Acender leds pelo barra do potenciometro)
+  Thread LED_POT(F3 - Acender leds pelo barra do potenciometro)
 -------------------------------------------------------------------------------*/
-void adc_Thread(void const *argument) {
+void ledPot_ThreadF3(void const *argument) {
 	uint8_t num_leds;
 	for(;;){
     osSignalWait(0x01, osWaitForever);
 		while(mode == 3){
-			num_leds = (ADC_VALUE * 8) / 512; // 0 a 8 LEDs
+			num_leds = (ADC_VALUE + 256) / 512; // 0 a 8 LEDs
+			osMutexWait(mutex_id, osWaitForever);
+      	freq_buzzer = num_leds;
+			osMutexRelease(mutex_id);
 		for (int i = 1; i <= 8; i++) {
 			if (i <= num_leds) {
 				ledsON(i);
@@ -467,14 +517,14 @@ void adc_Thread(void const *argument) {
 				ledsOFF(i);
 			}
 		}
-		 // Sinaliza a Thread do Buzzer
-    osSignalSet(T_buzzer_ID, 0x01);
+		// Sinaliza a Thread do Buzzer
+   	osSignalSet(T_buzzer_ID, 0x01);
 		osDelay(100); // Atualização a cada 100 ms
 		}
 	}
 }
 /*-------------------------------------------------------------------------------
-  Thread Buzzer(F4 - Trocar freq pelo num leds)
+  Thread Buzzer(F4 - Tocar buzzer pelo num leds)
 -------------------------------------------------------------------------------*/
 void buzzer_Thread(void const *argument) {
     uint8_t local_freq_buzzer;
@@ -482,17 +532,18 @@ void buzzer_Thread(void const *argument) {
     for (;;) {
 			// Aguarda sinal da Thread ADC
       osSignalWait(0x01, osWaitForever);
+
 			// Protege a leitura de freq_buzzer
       osMutexWait(mutex_id, osWaitForever);
-      local_freq_buzzer = ADC_VALUE; // Lê o valor atualizado
+      local_freq_buzzer = freq_buzzer; // Lê o valor atualizado
 			local_toggleBuzzer = toggleBuzzer;
       osMutexRelease(mutex_id);
-			if (local_toggleBuzzer && local_freq_buzzer > 0) {
+			if (local_toggleBuzzer) {
 				RCC->APB1ENR |= (1<<1);
-				TIM3->CCR2 = 50;
+				TIM3->CCR2 = 5000;
 				TIM3->CCER = 0x1 << 8; /*CC2P = 0, CC2E = 1 */
 				TIM3->CCMR2 = 0x0030;  /* toggle channel 3 */
-				TIM3->ARR = (local_freq_buzzer)*1047*2;				
+				TIM3->ARR = (local_freq_buzzer)*1047;				
 				TIM3->CR1 = 1;
 			 } 
 			else {
@@ -500,10 +551,115 @@ void buzzer_Thread(void const *argument) {
 				TIM3->CR1 = 0;                      // Desativa o timer
 				RCC->APB1ENR &= ~(1 << 1);          // Desabilita o clock
 			}			
-			osDelay(100);
+			osDelay(200);
 		}
 }
+/*-------------------------------------------------------------------------------
+  Thread lcd (configurar telas)
+-------------------------------------------------------------------------------*/
+void lcd_Thread(void const *argument){
+	for(;;){
+		osSignalWait(0x01, osWaitForever);
+		switch(funcao){
+			case 5: //SW5 Button C modo piscar funcao 1 
+				lcd_command(POSICAO_00);
+				lcd_print("    Funcao 1    ");
+				lcd_command(POSICAO_10);
+				lcd_print("  Par e impar   ");
+			
+				break;
+			
+			case 6: //SW6 Button D modo piscar funcao 2
+				lcd_command(POSICAO_00);
+				lcd_print("    Funcao 2    ");
+				lcd_command(POSICAO_10);
+				lcd_print("  Codigo Gray   ");
+			
+				break;
+			
+			case 7: //SW7 Button E modo piscar funcao 3
+				lcd_command(POSICAO_00);
+				lcd_print("    Funcao 3    ");
+				lcd_command(POSICAO_10);
+				lcd_print(" Potenciometro  ");
+			
+				break;
+			
+			case 8: //SW8 Button F modo sonoro/mudo funcao 4
+				lcd_command(POSICAO_00);
+				lcd_print("    Funcao 4    ");
+				lcd_command(POSICAO_10);
+				lcd_print("     Buzzer     ");
+			
+				break;
+			
+			case 1: 	//SW1 Button Y
+				lcd_command(POSICAO_00);
+				lcd_print("  Controle vel. ");
+				lcd_command(POSICAO_10);
+				lcd_print(" 2x velocidade  ");
+			
+				break;
+			
+			case 2:		//SW2 Button A
+				lcd_command(POSICAO_00);
+				lcd_print("  Controle vel. ");
+				lcd_command(POSICAO_10);
+				lcd_print(" 1/2 velocidade ");	
+			
+				break;
+			
+			case 3:		//SW3 Button X
+				lcd_command(POSICAO_00);
+				lcd_print("  Controle vel. ");
+				lcd_command(POSICAO_10);
+				lcd_print("  vel. padrao   ");			
+			
+				break;
+			
+			case 4: 	//SW4 Button B
+				lcd_command(POSICAO_00);
+				lcd_print("  Controle vel. ");
+				lcd_command(POSICAO_10);
+				lcd_print("  vel. buzzer   ");		
+			
+				break;
+			
+			case 15: //SW15 Button L
+				lcd_command(POSICAO_00);
+				lcd_print("  Controle vel. ");
+				lcd_command(POSICAO_10);
+				lcd_print("atual: 500 ms   ");
+			
+				break;
+			
+			case 16: //SW16 Button M
+				lcd_command(POSICAO_00);
+				lcd_print("  Controle vel. ");
+				lcd_command(POSICAO_10);
+				lcd_print("atual: 2000 ms   ");			
+			
+				break;
+			
+			case 17: //SW17 Button N
+				lcd_command(POSICAO_00);
+				lcd_print("  Controle vel. ");
+				lcd_command(POSICAO_10);
+				lcd_print("atual: 10000 ms   ");
 
+				break;
+
+			default:
+				lcd_command(POSICAO_00);
+				lcd_print("    Funcoes     ");
+				lcd_command(POSICAO_10);
+				lcd_print("Aperte um botao ");
+			
+				break;
+			}
+			osDelay(100);
+	}
+}
 /*----------------------------------------------------------------------------
   Initilise and create the threads
  *---------------------------------------------------------------------------*/
@@ -513,13 +669,14 @@ int main(void) {
 	adc_init();
 	lcd_init();
 	
-  mutex_id = osMutexCreate(osMutex(mutex_id));
+	mutex_id = osMutexCreate(osMutex(mutex_id));
 	
 	T_control_mode = osThreadCreate(osThread(control_mode), NULL);
-	T_led_ID1 = osThreadCreate(osThread(led_Thread1), NULL); 
-	T_led_ID3 = osThreadCreate(osThread(led_Thread3), NULL); 
-	T_adc_ID = osThreadCreate(osThread(adc_Thread), NULL); 	
-	T_buzzer_ID = osThreadCreate(osThread(buzzer_Thread), NULL); 		
+	T_lcd_ID = osThreadCreate(osThread(lcd_Thread), NULL);
+	T_buzzer_ID = osThreadCreate(osThread(buzzer_Thread), NULL);
+	T_adc_ID = osThreadCreate(osThread(ledPot_ThreadF3), NULL);
+	T_ledF1_ID = osThreadCreate(osThread(led_ThreadF1), NULL); 
+	T_ledF2_ID = osThreadCreate(osThread(led_ThreadF2), NULL); 
 	
 	osKernelStart(); // Inicia o RTOS
 	
