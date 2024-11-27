@@ -50,19 +50,19 @@
 //Buzzer
 #define BUZ 0 //PB0
 
+#define velocidade_default 1000 //1ms
+
 /*----------------------------------------------------------------------------
   Simple delay routine
  *---------------------------------------------------------------------------*/
-void delay_ms(uint16_t t)
-{
+void delay_ms(uint16_t t){
 	volatile unsigned long l = 0;
 	for(uint16_t i = 0; i < t; i++)
 		for(l = 0; l < 6000; l++)
 		{
 		}
 }
-void delay_us(uint16_t t)
-{
+void delay_us(uint16_t t){
 	volatile unsigned long l = 0;
 	for(uint16_t i = 0; i < t; i++)
 		for(l = 0; l < 6; l++)
@@ -70,6 +70,9 @@ void delay_us(uint16_t t)
 		}
 }
 
+/*----------------------------------------------------------------------------
+  Init RedPill routine
+ *---------------------------------------------------------------------------*/
 void setup_RedPill(){
 
 	//int16_t swa, swb, swc;  //Variables to read the switches according to the port it is connected
@@ -181,8 +184,10 @@ void leds_apaga_todos(){
 }
 
 
-void lcd_putValue(unsigned char value)
-{
+/*----------------------------------------------------------------------------
+  LCD routine
+ *---------------------------------------------------------------------------*/
+void lcd_putValue(unsigned char value){
 	uint16_t aux;
 	aux = 0x0000; //clear aux
 	GPIOA->BRR = (1<<5)|(1<<6)|(1<<8)|(1<<11); /* clear PA5, PA6, PA8, PA11 */
@@ -252,12 +257,22 @@ void lcd_init(){
 	delay_ms(3);
 }
 
+/*----------------------------------------------------------------------------
+  ADC routine
+ *---------------------------------------------------------------------------*/
 void adc_init(){
 	ADC1->SQR3 = 9;	/* choose channel 9 as the input */
 	ADC1->CR2 = 1;	/* ADON = 1 (start conversion) */
 	ADC1->CR2 |= 2; //autocalibration
 	delay_us(2);
 }
+uint16_t readADC(){
+	while((ADC1->SR&(1<<1)) == 0); /* wait until the EOC flag is set */		
+	return ADC1->DR;
+}
+/*----------------------------------------------------------------------------
+  Swtichs routine
+ *---------------------------------------------------------------------------*/
 int chaves_ler_todas(){
 	int chave_id_press;
 
@@ -298,12 +313,9 @@ int chaves_ler_todas(){
 		}
 		return chave_id_press = 0;
 }
-
-uint16_t readADC(){
-	while((ADC1->SR&(1<<1)) == 0); /* wait until the EOC flag is set */		
-	return ADC1->DR;
-}
-
+/*----------------------------------------------------------------------------
+	Define Threads
+ *---------------------------------------------------------------------------*/
 void led_ThreadF1 (void const *argument);
 void led_ThreadF2 (void const *argument);
 void ledPot_ThreadF3  (void const *argument);
@@ -330,16 +342,17 @@ osThreadId T_lcd_ID;
 osMutexId mutex_id;           
 osMutexDef(mutex_id); 
 
+//volatiles para alocacao dinamica
 volatile uint16_t ADC_VALUE = 0;
 volatile uint16_t freq_buzzer = 0;
 volatile uint8_t toggleBuzzer =  0;
 volatile uint8_t mode = 0;
-
-#define velocidade_default 1000
 volatile uint16_t velocidade = velocidade_default;
-
 volatile uint8_t funcao;
 
+/*----------------------------------------------------------------------------
+	Thread Controle (Gerencia thread para cada botao)
+ *---------------------------------------------------------------------------*/
 void control_mode(void const *argument){
 	lcd_command(POSICAO_00);
 	lcd_print("    Funcoes     ");
@@ -374,7 +387,7 @@ void control_mode(void const *argument){
 			break;
 		
 		case 8: //SW8 Button F modo sonoro/mudo funcao 4
-		osDelay(300);
+			osDelay(300);
 			osMutexWait(mutex_id, osWaitForever);
       toggleBuzzer = !toggleBuzzer; // Alterna entre som/mudo
 			osMutexRelease(mutex_id);
@@ -504,8 +517,8 @@ void ledPot_ThreadF3(void const *argument) {
 				ledsOFF(i);
 			}
 		}
-		 // Sinaliza a Thread do Buzzer
-    	osSignalSet(T_buzzer_ID, 0x01);
+		// Sinaliza a Thread do Buzzer
+   	osSignalSet(T_buzzer_ID, 0x01);
 		osDelay(100); // Atualização a cada 100 ms
 		}
 	}
@@ -523,7 +536,7 @@ void buzzer_Thread(void const *argument) {
 			// Protege a leitura de freq_buzzer
       osMutexWait(mutex_id, osWaitForever);
       local_freq_buzzer = freq_buzzer; // Lê o valor atualizado
-		local_toggleBuzzer = toggleBuzzer;
+			local_toggleBuzzer = toggleBuzzer;
       osMutexRelease(mutex_id);
 			if (local_toggleBuzzer) {
 				RCC->APB1ENR |= (1<<1);
