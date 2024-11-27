@@ -361,7 +361,7 @@ void control_mode(void const *argument){
 			osSignalSet(T_lcd_ID, 0x01); // Sinaliza thread lcd
 		
 			mode = 2;
-			leds_apaga_todos();
+			
 			osSignalSet(T_ledF2_ID, 0x01); // Sinaliza thread Gray Cod
 			break;
 		
@@ -471,7 +471,7 @@ void led_ThreadF2(void const *argument) {
 		uint8_t gray_code[] = {0b0001, 0b0011, 0b0010, 0b0110, 0b0111, 0b0101, 0b0100, 0b1100};
     for(;;) {
 			osSignalWait(0x01, osWaitForever);
-			
+			leds_apaga_todos();
 			while(mode == 2){
         for (int i = 0; i <= 8; i++) {
 					if(i == 7){
@@ -513,7 +513,7 @@ void ledPot_ThreadF3(void const *argument) {
 /*-------------------------------------------------------------------------------
   Thread Buzzer(F4 - Tocar buzzer pelo num leds)
 -------------------------------------------------------------------------------*/
-void buzzer_ThreadF4(void const *argument) {
+void buzzer_Thread(void const *argument) {
     uint8_t local_freq_buzzer;
 		uint8_t local_toggleBuzzer;
     for (;;) {
